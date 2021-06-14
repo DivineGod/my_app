@@ -102,7 +102,7 @@ const APP: () = {
             .manufacturer("ando")
             .product("nano")
             .serial_number(env!("CARGO_PKG_VERSION"))
-            .device_class(3)
+            // .device_class(3) // Not having this will make the thing qwork?
             .build();
 
         let mut timer = timer::Timer::tim3(device.TIM3, 1.khz(), clocks, &mut rcc.apb1);
