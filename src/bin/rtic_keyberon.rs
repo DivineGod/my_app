@@ -95,6 +95,7 @@ const APP: () = {
         // Setup clocks
         let mut flash = device.FLASH.constrain();
         let mut rcc = device.RCC.constrain();
+        /*
         let clocks = rcc
             .cfgr
             .use_hse(8.mhz())
@@ -102,7 +103,7 @@ const APP: () = {
             .pclk1(36.mhz())
             .pclk2(36.mhz())
             .freeze(&mut flash.acr);
-        /*
+        // */
         let clocks = rcc
             .cfgr
             .use_hse(8.mhz())
@@ -110,7 +111,6 @@ const APP: () = {
             .pclk1(24.mhz())
             .pclk2(24.mhz())
             .freeze(&mut flash.acr);
-        // */
         assert!(clocks.usbclk_valid());
 
         let mut gpioa = device.GPIOA.split(&mut rcc.ahb);
