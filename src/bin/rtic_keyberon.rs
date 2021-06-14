@@ -24,6 +24,8 @@ use stm32f3xx_hal::usb::Peripheral;
 use stm32f3xx_hal::usb::UsbBusType;
 use usb_device::bus::UsbBusAllocator;
 use usb_device::class::UsbClass as _;
+use usb_device::device::UsbDeviceBuilder;
+use usb_device::device::UsbVidPid;
 
 type UsbClass = keyberon::Class<'static, UsbBusType, Leds>;
 type UsbDevice = usb_device::device::UsbDevice<'static, UsbBusType>;
@@ -133,7 +135,12 @@ const APP: () = {
         let leds = Leds { caps_lock: led };
 
         let usb_class = keyberon::new_class(usb_bus, leds);
-        let usb_device = keyberon::new_device(usb_bus);
+        // let usb_device = keyberon::new_device(usb_bus);
+        let usb_device = UsbDeviceBuilder::new(usb_bus, UsbVidPid(0x16c0, 0x27db))
+            .manufacturer("ando")
+            .product("nano")
+            .serial_number(env!("CARGO_PKG_VERSION"))
+            .build();
 
         let mut timer = timer::Timer::tim3(device.TIM3, 1.khz(), clocks, &mut rcc.apb1);
         timer.listen(timer::Event::Update);
@@ -184,7 +191,7 @@ const APP: () = {
         usb_poll(&mut cx.resources.usb_device, &mut cx.resources.usb_class);
     }
 
-    #[task(binds=TIM3, priority=1, resources=[timer,  usb_class, matrix, debouncer, layout])]
+    #[task(binds=TIM3, priority=1, resources=[timer, usb_class, matrix, debouncer, layout])]
     fn tick(mut cx: tick::Context) {
         cx.resources.timer.clear_update_interrupt_flag();
 
@@ -193,6 +200,8 @@ const APP: () = {
             .debouncer
             .events(cx.resources.matrix.get().unwrap())
         {
+            // use keyberon::layout::Event;
+            defmt::info!("got an event");
             cx.resources.layout.event(event);
         }
         match cx.resources.layout.tick() {
@@ -215,8 +224,8 @@ fn send_report(iter: impl Iterator<Item = KeyCode>, usb_class: &mut resources::u
     }
 }
 
-fn usb_poll(usb_dev: &mut UsbDevice, keyboard: &mut UsbClass) {
-    if usb_dev.poll(&mut [keyboard]) {
+fn usb_poll(usb_device: &mut UsbDevice, keyboard: &mut UsbClass) {
+    if usb_device.poll(&mut [keyboard]) {
         keyboard.poll();
     }
 }
