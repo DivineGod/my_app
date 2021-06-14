@@ -60,7 +60,7 @@ impl Request {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, defmt::Format, Clone, Copy, PartialEq)]
 pub enum ReportType {
     Input,
     Output,
@@ -118,6 +118,8 @@ impl<B: UsbBus, D: HidDevice> HidClass<'_, B, D> {
             self.expect_interrupt_in_complete = true;
         }
 
+        defmt::info!("writing");
+
         match self.endpoint_interrupt_in.write(data) {
             Ok(count) => Ok(count),
             Err(UsbError::WouldBlock) => Ok(0),
@@ -126,6 +128,7 @@ impl<B: UsbBus, D: HidDevice> HidClass<'_, B, D> {
     }
 
     fn get_report(&mut self, xfer: ControlIn<B>) {
+        defmt::info!("get reoprt");
         let req = xfer.request();
         let [report_type, report_id] = req.value.to_be_bytes();
         let report_type = ReportType::from(report_type);
@@ -136,6 +139,7 @@ impl<B: UsbBus, D: HidDevice> HidClass<'_, B, D> {
     }
 
     fn set_report(&mut self, xfer: ControlOut<B>) {
+        defmt::info!("set reoprt");
         let req = xfer.request();
         let [report_type, report_id] = req.value.to_be_bytes();
         let report_type = ReportType::from(report_type);
@@ -157,7 +161,7 @@ impl<B: UsbBus, D: HidDevice> UsbClass<B> for HidClass<'_, B, D> {
         &self,
         writer: &mut DescriptorWriter,
     ) -> usb_device::Result<()> {
-        defmt::info!("horse");
+        defmt::info!("get_configuration_descriptors");
         writer.interface(
             self.interface,
             INTERFACE_CLASS_HID,
