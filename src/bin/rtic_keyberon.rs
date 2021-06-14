@@ -16,21 +16,21 @@ use keyberon::layout::Layout;
 use keyberon::matrix::{Matrix, PressedKeys};
 use my_app as _;
 use rtic::app;
-use stm32f3xx_hal::gpio::{gpioa, gpioc, Input, Output, PullUp, PushPull};
+use stm32f3xx_hal::gpio::{gpioa, gpioc, Input, Output, PullDown, PushPull};
 use stm32f3xx_hal::prelude::*;
 use stm32f3xx_hal::timer;
 use stm32f3xx_hal::timer::Timer;
 use stm32f3xx_hal::usb::Peripheral;
-use stm32f3xx_hal::usb::UsbBusType;
+use stm32f3xx_hal::usb::UsbBus;
 use usb_device::bus::UsbBusAllocator;
 use usb_device::class::UsbClass as _;
 use usb_device::device::UsbDeviceBuilder;
 use usb_device::device::UsbVidPid;
 
-type UsbClass = keyberon::Class<'static, UsbBusType, Leds>;
-type UsbDevice = usb_device::device::UsbDevice<'static, UsbBusType>;
+type UsbClass = keyberon::Class<'static, UsbBus<Peripheral>, Leds>;
+type UsbDevice = usb_device::device::UsbDevice<'static, UsbBus<Peripheral>>;
 
-pub struct Cols(gpioa::PA4<Input<PullUp>>);
+pub struct Cols(gpioa::PA4<Input<PullDown>>);
 impl_heterogenous_array! {
     Cols,
     dyn InputPin<Error = Infallible>,
@@ -77,7 +77,7 @@ const APP: () = {
 
     #[init]
     fn init(cx: init::Context) -> init::LateResources {
-        static mut USB_BUS: Option<UsbBusAllocator<UsbBusType>> = None;
+        static mut USB_BUS: Option<UsbBusAllocator<UsbBus<Peripheral>>> = None;
 
         defmt::info!("hi");
 
@@ -86,7 +86,7 @@ const APP: () = {
         // Setup clocks
         let mut flash = device.FLASH.constrain();
         let mut rcc = device.RCC.constrain();
-        /*
+        //*
         let clocks = rcc
             .cfgr
             .use_hse(8.mhz())
@@ -95,6 +95,7 @@ const APP: () = {
             .pclk2(36.mhz())
             .freeze(&mut flash.acr);
         // */
+        /*
         let clocks = rcc
             .cfgr
             .use_hse(8.mhz())
@@ -102,6 +103,7 @@ const APP: () = {
             .pclk1(24.mhz())
             .pclk2(24.mhz())
             .freeze(&mut flash.acr);
+        // */
         assert!(clocks.usbclk_valid());
 
         let mut gpioa = device.GPIOA.split(&mut rcc.ahb);
@@ -122,7 +124,7 @@ const APP: () = {
             pin_dm: usb_dm,
             pin_dp: usb_dp,
         };
-        *USB_BUS = Some(UsbBusType::new(usb));
+        *USB_BUS = Some(UsbBus::new(usb));
         let usb_bus = USB_BUS
             .as_ref()
             .expect("Couldn't make the USB_BUS a static reference");
@@ -149,7 +151,7 @@ const APP: () = {
             Cols(
                 gpioa
                     .pa4
-                    .into_pull_up_input(&mut gpioa.moder, &mut gpioa.pupdr),
+                    .into_pull_down_input(&mut gpioa.moder, &mut gpioa.pupdr),
             ),
             Rows(
                 gpioa

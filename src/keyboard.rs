@@ -173,7 +173,7 @@ impl Keyboard {
 
 impl HidDevice for Keyboard {
     fn subclass(&self) -> Subclass {
-        Subclass::BootInterface
+        Subclass::None
     }
 
     fn protocol(&self) -> Protocol {
@@ -182,6 +182,7 @@ impl HidDevice for Keyboard {
 
     fn report_descriptor(&self) -> &[u8] {
         BOOT_DESC
+        // SOARER_DESC
     }
 
     fn get_report(&mut self, report_type: ReportType, _report_id: u8) -> Result<&[u8], ()> {

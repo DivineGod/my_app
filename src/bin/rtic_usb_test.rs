@@ -9,7 +9,7 @@ use my_app as _;
 use embedded_hal::digital::v2::OutputPin;
 use rtic::app;
 use rtic::cyccnt::U32Ext;
-use stm32f3xx_hal::gpio::{gpioa, gpioc, Input, Output, PullUp, PushPull};
+use stm32f3xx_hal::gpio::{gpioa, gpioc, Input, Output, PullDown, PushPull};
 use stm32f3xx_hal::prelude::*;
 use stm32f3xx_hal::timer;
 use stm32f3xx_hal::timer::Timer;
@@ -36,7 +36,7 @@ const APP: () = {
     struct Resources {
         usb_device: UsbDevice<'static, UsbBus<Peripheral>>,
         usb_class: my_app::hid::HidClass<'static, UsbBus<Peripheral>, my_app::keyboard::Keyboard>,
-        button: gpioa::PA4<Input<PullUp>>,
+        button: gpioa::PA4<Input<PullDown>>,
         // output: gpioa::PA5<Output<PushPull>>,
         led: gpioc::PC13<Output<PushPull>>,
         timer: Timer<stm32f3xx_hal::stm32::TIM3>,
@@ -97,8 +97,8 @@ const APP: () = {
             .as_ref()
             .expect("Couldn't make the USB_BUS a static reference");
 
-        let usb_class = my_app::hid::HidClass::new(my_app::keyboard::Keyboard::new(), &usb_bus);
-        let usb_device = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(VID, PID))
+        let usb_class = my_app::hid::HidClass::new(my_app::keyboard::Keyboard::new(), usb_bus);
+        let usb_device = UsbDeviceBuilder::new(usb_bus, UsbVidPid(VID, PID))
             .manufacturer("ando")
             .product("nano")
             .serial_number(env!("CARGO_PKG_VERSION"))
@@ -111,10 +111,10 @@ const APP: () = {
         let mut output = gpioa
             .pa5
             .into_push_pull_output(&mut gpioa.moder, &mut gpioa.otyper);
-        output.set_low().unwrap();
+        output.set_high().unwrap();
         let button = gpioa
             .pa4
-            .into_pull_up_input(&mut gpioa.moder, &mut gpioa.pupdr);
+            .into_pull_down_input(&mut gpioa.moder, &mut gpioa.pupdr);
 
         // Setup LED
         let mut led = gpioc
@@ -163,7 +163,7 @@ const APP: () = {
         // Use the safe local `static mut` of RTIC
         static mut LED_STATE: bool = false;
 
-        if cx.resources.button.is_low().unwrap() {
+        if cx.resources.button.is_high().unwrap() {
             if *LED_STATE {
                 cx.resources.led.set_high().unwrap();
                 *LED_STATE = false;
@@ -185,7 +185,7 @@ const APP: () = {
         let key_pressed = cx
             .resources
             .button
-            .is_low()
+            .is_high()
             .expect("Couldn't poll pressed keys!");
         cx.resources
             .usb_class
