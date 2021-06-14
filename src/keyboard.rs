@@ -1,5 +1,4 @@
 use crate::hid::{HidDevice, Protocol, ReportType, Subclass};
-use stm32f3xx_hal::prelude::*;
 
 #[allow(dead_code)]
 #[rustfmt::skip]

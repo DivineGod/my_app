@@ -1,4 +1,5 @@
 #![deny(unsafe_code)]
+#![deny(warnings)]
 #![no_main]
 #![no_std]
 
@@ -6,29 +7,23 @@ use core::convert::Infallible;
 use cortex_m::asm::delay;
 use embedded_hal::digital::v2::{InputPin, OutputPin};
 use generic_array::typenum::U1;
-use keyberon::action::{k, l, m, Action, Action::*, HoldTapConfig};
+use keyberon::action::k;
 use keyberon::debounce::Debouncer;
 use keyberon::impl_heterogenous_array;
 use keyberon::key_code::KbHidReport;
 use keyberon::key_code::KeyCode::{self, *};
-use keyberon::layout::{Layers, Layout};
+use keyberon::layout::Layout;
 use keyberon::matrix::{Matrix, PressedKeys};
 use my_app as _;
 use rtic::app;
-use rtic::cyccnt::U32Ext;
 use stm32f3xx_hal::gpio::{gpioa, gpioc, Input, Output, PullUp, PushPull};
 use stm32f3xx_hal::prelude::*;
 use stm32f3xx_hal::timer;
 use stm32f3xx_hal::timer::Timer;
 use stm32f3xx_hal::usb::Peripheral;
-use stm32f3xx_hal::usb::UsbBus;
 use stm32f3xx_hal::usb::UsbBusType;
 use usb_device::bus::UsbBusAllocator;
 use usb_device::class::UsbClass as _;
-// use usb_device::device::UsbDeviceBuilder;
-// use usb_device::device::UsbVidPid;
-
-const PERIOD: u32 = 10_000_000;
 
 type UsbClass = keyberon::Class<'static, UsbBusType, Leds>;
 type UsbDevice = usb_device::device::UsbDevice<'static, UsbBusType>;
@@ -64,13 +59,8 @@ impl keyberon::keyboard::Leds for Leds {
     }
 }
 
-// Generic keyboard from
-// https://github.com/obdev/v-usb/blob/master/usbdrv/USB-IDs-for-free.txt
-const PID: u16 = 0x27db;
-const VID: u16 = 0x16c0;
-
 // We need to pass monotonic = rtic::cyccnt::CYCCNT to use schedule feature fo RTIC
-#[app(device = stm32f3xx_hal::pac, peripherals = true, monotonic = rtic::cyccnt::CYCCNT)]
+#[app(device = stm32f3xx_hal::pac, peripherals = true)]
 const APP: () = {
     // Global resources (global variables) are defined here and initialized with the
     // `LateResources` struct in init
@@ -85,7 +75,6 @@ const APP: () = {
 
     #[init]
     fn init(cx: init::Context) -> init::LateResources {
-        static mut EP_MEMORY: [u32; 512] = [0; 512];
         static mut USB_BUS: Option<UsbBusAllocator<UsbBusType>> = None;
 
         defmt::info!("hi");
