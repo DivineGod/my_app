@@ -6,7 +6,7 @@
 use core::convert::Infallible;
 use cortex_m::asm::delay;
 use embedded_hal::digital::v2::{InputPin, OutputPin};
-use generic_array::typenum::U1;
+use generic_array::typenum::{U1, U2};
 use keyberon::action::k;
 use keyberon::debounce::Debouncer;
 use keyberon::impl_heterogenous_array;
@@ -16,7 +16,7 @@ use keyberon::layout::Layout;
 use keyberon::matrix::{Matrix, PressedKeys};
 use my_app as _;
 use rtic::app;
-use stm32f3xx_hal::gpio::{gpioa, gpioc, Input, Output, PullDown, PushPull};
+use stm32f3xx_hal::gpio::{gpioa, gpioc, Input, Output, PullUp, PushPull};
 use stm32f3xx_hal::prelude::*;
 use stm32f3xx_hal::timer;
 use stm32f3xx_hal::timer::Timer;
@@ -30,12 +30,12 @@ use usb_device::device::UsbVidPid;
 type UsbClass = keyberon::Class<'static, UsbBus<Peripheral>, Leds>;
 type UsbDevice = usb_device::device::UsbDevice<'static, UsbBus<Peripheral>>;
 
-pub struct Cols(gpioa::PA4<Input<PullDown>>);
+pub struct Cols(gpioa::PA6<Input<PullUp>>, gpioa::PA7<Input<PullUp>>);
 impl_heterogenous_array! {
     Cols,
     dyn InputPin<Error = Infallible>,
-    U1,
-    [0]
+    U2,
+    [0, 1]
 }
 
 pub struct Rows(gpioa::PA5<Output<PushPull>>);
@@ -46,7 +46,7 @@ impl_heterogenous_array! {
     [0]
 }
 
-pub static LAYERS: keyberon::layout::Layers<()> = &[&[&[k(A)]]];
+pub static LAYERS: keyberon::layout::Layers<()> = &[&[&[k(B), k(A)]]];
 
 pub struct Leds {
     caps_lock: gpioc::PC13<Output<PushPull>>,
@@ -70,7 +70,7 @@ const APP: () = {
         usb_device: UsbDevice,
         usb_class: UsbClass,
         matrix: Matrix<Cols, Rows>,
-        debouncer: Debouncer<PressedKeys<U1, U1>>,
+        debouncer: Debouncer<PressedKeys<U1, U2>>,
         layout: Layout<()>,
         timer: Timer<stm32f3xx_hal::stm32::TIM3>,
     }
@@ -150,8 +150,11 @@ const APP: () = {
         let matrix = Matrix::new(
             Cols(
                 gpioa
-                    .pa4
-                    .into_pull_down_input(&mut gpioa.moder, &mut gpioa.pupdr),
+                    .pa6
+                    .into_pull_up_input(&mut gpioa.moder, &mut gpioa.pupdr),
+                gpioa
+                    .pa7
+                    .into_pull_up_input(&mut gpioa.moder, &mut gpioa.pupdr),
             ),
             Rows(
                 gpioa
@@ -177,19 +180,19 @@ const APP: () = {
 
     #[task(binds=USB_HP_CAN_TX, priority = 2, resources = [usb_device, usb_class])]
     fn hp_handler(mut cx: hp_handler::Context) {
-        defmt::info!("hp handler");
+        // defmt::info!("hp handler");
         usb_poll(&mut cx.resources.usb_device, &mut cx.resources.usb_class);
     }
 
     #[task(binds=USB_LP_CAN_RX0, priority = 2, resources = [usb_device, usb_class])]
     fn lp_handler(mut cx: lp_handler::Context) {
-        defmt::info!("lp handler");
+        // defmt::info!("lp handler");
         usb_poll(&mut cx.resources.usb_device, &mut cx.resources.usb_class);
     }
 
     #[task(binds=USB_LP, priority=2, resources=[usb_device, usb_class])]
     fn usb_lp_handler(mut cx: usb_lp_handler::Context) {
-        defmt::info!("usb lp handler");
+        // defmt::info!("usb lp handler");
         usb_poll(&mut cx.resources.usb_device, &mut cx.resources.usb_class);
     }
 

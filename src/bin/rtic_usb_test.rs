@@ -9,7 +9,7 @@ use my_app as _;
 use embedded_hal::digital::v2::OutputPin;
 use rtic::app;
 use rtic::cyccnt::U32Ext;
-use stm32f3xx_hal::gpio::{gpioa, gpioc, Input, Output, PullDown, PushPull};
+use stm32f3xx_hal::gpio::{gpioa, gpioc, Input, Output, PullUp, PushPull};
 use stm32f3xx_hal::prelude::*;
 use stm32f3xx_hal::timer;
 use stm32f3xx_hal::timer::Timer;
@@ -36,7 +36,7 @@ const APP: () = {
     struct Resources {
         usb_device: UsbDevice<'static, UsbBus<Peripheral>>,
         usb_class: my_app::hid::HidClass<'static, UsbBus<Peripheral>, my_app::keyboard::Keyboard>,
-        button: gpioa::PA4<Input<PullDown>>,
+        button: gpioa::PA4<Input<PullUp>>,
         // output: gpioa::PA5<Output<PushPull>>,
         led: gpioc::PC13<Output<PushPull>>,
         timer: Timer<stm32f3xx_hal::stm32::TIM3>,
@@ -111,10 +111,10 @@ const APP: () = {
         let mut output = gpioa
             .pa5
             .into_push_pull_output(&mut gpioa.moder, &mut gpioa.otyper);
-        output.set_high().unwrap();
+        output.set_low().unwrap();
         let button = gpioa
             .pa4
-            .into_pull_down_input(&mut gpioa.moder, &mut gpioa.pupdr);
+            .into_pull_up_input(&mut gpioa.moder, &mut gpioa.pupdr);
 
         // Setup LED
         let mut led = gpioc
@@ -163,7 +163,7 @@ const APP: () = {
         // Use the safe local `static mut` of RTIC
         static mut LED_STATE: bool = false;
 
-        if cx.resources.button.is_high().unwrap() {
+        if cx.resources.button.is_low().unwrap() {
             if *LED_STATE {
                 cx.resources.led.set_high().unwrap();
                 *LED_STATE = false;
@@ -185,7 +185,7 @@ const APP: () = {
         let key_pressed = cx
             .resources
             .button
-            .is_high()
+            .is_low()
             .expect("Couldn't poll pressed keys!");
         cx.resources
             .usb_class
