@@ -22,6 +22,7 @@ panic-semihosting = "0.5.6"
 # TODO(4) enter your HAL here
 stm32f3xx-hal = { version = "0.6.1", features = ["rt", "stm32f303xc"] }
 usb-device = "0.2.8"
+usbd-hid = { path =  "../usbd-hid" }
 
 [features]
 # set logging levels here

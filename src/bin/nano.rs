@@ -6,7 +6,7 @@
 use core::convert::Infallible;
 use cortex_m::asm::delay;
 use embedded_hal::digital::v2::{InputPin, OutputPin};
-use generic_array::typenum::{U1, U2};
+use generic_array::typenum::{U5, U6};
 // use keyberon::action::{k, Action::*};
 use keyberon::action::k;
 use keyberon::debounce::Debouncer;
@@ -17,7 +17,7 @@ use keyberon::layout::Layout;
 use keyberon::matrix::{Matrix, PressedKeys};
 use my_app as _;
 use rtic::app;
-use stm32f3xx_hal::gpio::{gpioa, gpioc, Input, Output, PullUp, PushPull};
+use stm32f3xx_hal::gpio::{gpiob, gpioc, Input, Output, PullUp, PushPull};
 use stm32f3xx_hal::prelude::*;
 use stm32f3xx_hal::timer;
 use stm32f3xx_hal::timer::Timer;
@@ -31,23 +31,43 @@ use usb_device::device::UsbVidPid;
 type UsbClass = keyberon::Class<'static, UsbBus<Peripheral>, Leds>;
 type UsbDevice = usb_device::device::UsbDevice<'static, UsbBus<Peripheral>>;
 
-pub struct Cols(gpioa::PA6<Input<PullUp>>, gpioa::PA7<Input<PullUp>>);
+pub struct Cols(
+    gpiob::PB0<Input<PullUp>>,
+    gpiob::PB1<Input<PullUp>>,
+    gpiob::PB2<Input<PullUp>>,
+    gpiob::PB3<Input<PullUp>>,
+    gpiob::PB4<Input<PullUp>>,
+);
 impl_heterogenous_array! {
     Cols,
     dyn InputPin<Error = Infallible>,
-    U2,
-    [0, 1]
+    U5,
+    [0, 1, 2, 3, 4]
 }
 
-pub struct Rows(gpioa::PA5<Output<PushPull>>);
+pub struct Rows(
+    gpiob::PB13<Output<PushPull>>,
+    gpiob::PB14<Output<PushPull>>,
+    gpiob::PB15<Output<PushPull>>,
+    gpiob::PB10<Output<PushPull>>,
+    gpiob::PB11<Output<PushPull>>,
+    gpiob::PB12<Output<PushPull>>,
+);
 impl_heterogenous_array! {
     Rows,
     dyn OutputPin<Error = Infallible>,
-    U1,
-    [0]
+    U6,
+    [0, 1, 2, 3, 4, 5]
 }
 
-pub static LAYERS: keyberon::layout::Layers<()> = &[&[&[k(CapsLock), k(A)]]];
+pub static LAYERS: keyberon::layout::Layers<()> = &[&[
+    &[k(Kb1), k(Kb1), k(Kb1), k(Kb1), k(Kb1)],
+    &[k(Kb2), k(Kb2), k(Kb2), k(Kb2), k(Kb2)],
+    &[k(Kb3), k(Kb3), k(Kb3), k(Kb3), k(Kb3)],
+    &[k(Kb4), k(Kb4), k(Kb4), k(Kb4), k(Kb4)],
+    &[k(Kb5), k(Kb5), k(Kb5), k(Kb5), k(Kb5)],
+    &[k(Kb6), k(Kb6), k(Kb6), k(Kb6), k(Kb6)],
+]];
 
 pub struct Leds {
     caps_lock: gpioc::PC13<Output<PushPull>>,
@@ -71,7 +91,7 @@ const APP: () = {
         usb_device: UsbDevice,
         usb_class: UsbClass,
         matrix: Matrix<Cols, Rows>,
-        debouncer: Debouncer<PressedKeys<U1, U2>>,
+        debouncer: Debouncer<PressedKeys<U6, U5>>,
         layout: Layout<()>,
         timer: Timer<stm32f3xx_hal::stm32::TIM3>,
     }
@@ -108,6 +128,7 @@ const APP: () = {
         assert!(clocks.usbclk_valid());
 
         let mut gpioa = device.GPIOA.split(&mut rcc.ahb);
+        let mut gpiob = device.GPIOB.split(&mut rcc.ahb);
         let mut gpioc = device.GPIOC.split(&mut rcc.ahb);
 
         // Pull the D+ pin down to send a RESET condition to the USB bus.
@@ -150,17 +171,41 @@ const APP: () = {
 
         let matrix = Matrix::new(
             Cols(
-                gpioa
-                    .pa6
-                    .into_pull_up_input(&mut gpioa.moder, &mut gpioa.pupdr),
-                gpioa
-                    .pa7
-                    .into_pull_up_input(&mut gpioa.moder, &mut gpioa.pupdr),
+                gpiob
+                    .pb0
+                    .into_pull_up_input(&mut gpiob.moder, &mut gpiob.pupdr),
+                gpiob
+                    .pb1
+                    .into_pull_up_input(&mut gpiob.moder, &mut gpiob.pupdr),
+                gpiob
+                    .pb2
+                    .into_pull_up_input(&mut gpiob.moder, &mut gpiob.pupdr),
+                gpiob
+                    .pb3
+                    .into_pull_up_input(&mut gpiob.moder, &mut gpiob.pupdr),
+                gpiob
+                    .pb4
+                    .into_pull_up_input(&mut gpiob.moder, &mut gpiob.pupdr),
             ),
             Rows(
-                gpioa
-                    .pa5
-                    .into_push_pull_output(&mut gpioa.moder, &mut gpioa.otyper),
+                gpiob
+                    .pb13
+                    .into_push_pull_output(&mut gpiob.moder, &mut gpiob.otyper),
+                gpiob
+                    .pb14
+                    .into_push_pull_output(&mut gpiob.moder, &mut gpiob.otyper),
+                gpiob
+                    .pb15
+                    .into_push_pull_output(&mut gpiob.moder, &mut gpiob.otyper),
+                gpiob
+                    .pb10
+                    .into_push_pull_output(&mut gpiob.moder, &mut gpiob.otyper),
+                gpiob
+                    .pb11
+                    .into_push_pull_output(&mut gpiob.moder, &mut gpiob.otyper),
+                gpiob
+                    .pb12
+                    .into_push_pull_output(&mut gpiob.moder, &mut gpiob.otyper),
             ),
         );
 

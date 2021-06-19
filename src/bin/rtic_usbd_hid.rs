@@ -20,6 +20,9 @@ use usb_device::class::UsbClass as _;
 use usb_device::device::UsbDevice;
 use usb_device::device::UsbDeviceBuilder;
 use usb_device::device::UsbVidPid;
+use usbd_hid::descriptor::generator_prelude::*;
+use usbd_hid::descriptor::KeyboardReport;
+use usbd_hid::hid_class::HIDClass;
 
 const PERIOD: u32 = 10_000_000;
 
@@ -35,7 +38,7 @@ const APP: () = {
     // `LateResources` struct in init
     struct Resources {
         usb_device: UsbDevice<'static, UsbBus<Peripheral>>,
-        usb_class: my_app::hid::HidClass<'static, UsbBus<Peripheral>, my_app::keyboard::Keyboard>,
+        usb_class: HIDClass<'static, UsbBus<Peripheral>>,
         button: gpioa::PA6<Input<PullUp>>,
         // output: gpioa::PA5<Output<PushPull>>,
         led: gpioc::PC13<Output<PushPull>>,
@@ -97,7 +100,7 @@ const APP: () = {
             .as_ref()
             .expect("Couldn't make the USB_BUS a static reference");
 
-        let usb_class = my_app::hid::HidClass::new(my_app::keyboard::Keyboard::new(), usb_bus);
+        let usb_class = HIDClass::new(usb_bus, KeyboardReport::desc(), 1);
         let usb_device = UsbDeviceBuilder::new(usb_bus, UsbVidPid(VID, PID))
             .manufacturer("ando")
             .product("nano")
@@ -189,14 +192,21 @@ const APP: () = {
             .expect("Couldn't poll pressed keys!");
         cx.resources
             .usb_class
-            .lock(|k| {
+            .lock(|hid| {
                 // defmt::info!("writing from tick");
                 // Type the character `a`
                 if key_pressed {
-                    k.write(&[0, 0, 4, 0, 0, 0, 0, 0])
+                    hid.push_input(&KeyboardReport {
+                        modifier: 0,
+                        leds: 0,
+                        keycodes: [4, 0, 0, 0, 0, 0],
+                    })
                 } else {
-                    // k.write(&[0, 0, 0, 0, 0, 0, 0, 0])
-                    Ok(0)
+                    hid.push_input(&KeyboardReport {
+                        modifier: 0,
+                        leds: 0,
+                        keycodes: [4, 0, 0, 0, 0, 0],
+                    })
                 }
             })
             .expect("Couldn't get access to USB_CLASS!");
@@ -209,7 +219,7 @@ const APP: () = {
 
 fn usb_poll(
     usb_dev: &mut UsbDevice<'static, UsbBus<Peripheral>>,
-    keyboard: &mut my_app::hid::HidClass<'static, UsbBus<Peripheral>, my_app::keyboard::Keyboard>,
+    keyboard: &mut HIDClass<'static, UsbBus<Peripheral>>,
 ) {
     if usb_dev.poll(&mut [keyboard]) {
         keyboard.poll();
